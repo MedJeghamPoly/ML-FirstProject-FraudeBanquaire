@@ -1,0 +1,19 @@
+# Projet détection de fraude — Python 3.10+
+pandas>=2.0
+numpy>=1.24
+matplotlib>=3.7
+seaborn>=0.13
+scikit-learn>=1.3
+scipy>=1.10
+imbalanced-learn>=0.11
+joblib>=1.3
+jupyter>=1.0
+nbformat>=5.9
+pytest>=7.0
+# Boosting (optionnel)
+xgboost>=2.0
+lightgbm>=4.0
+# Explicabilité (optionnel, utilisé dans 02_Modeling)
+shap>=0.44
+# Génération Presentation.pdf
+fpdf2>=2.7
