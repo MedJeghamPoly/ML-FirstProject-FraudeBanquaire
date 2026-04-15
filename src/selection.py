@@ -36,9 +36,10 @@ def select_features_l1(
     scaler = StandardScaler()
     Xz = scaler.fit_transform(X_s)
 
+    # sklearn ≥ 1.8 : préférer l1_ratio=1 (L1 pur) à penalty="l1" (déprécié)
     lr = LogisticRegression(
-        penalty="l1",
         solver="liblinear",
+        l1_ratio=1.0,
         C=0.1,
         max_iter=3000,
         class_weight="balanced",

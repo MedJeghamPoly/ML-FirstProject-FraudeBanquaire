@@ -4,14 +4,18 @@ from pathlib import Path
 
 
 def get_project_root() -> Path:
+    """Racine du dépôt (dossier contenant ``src/paths.py``), même si cwd = notebooks/ ou tests/."""
     cwd = Path.cwd().resolve()
+    marker = Path("src") / "paths.py"
+    for base in (cwd, cwd.parent, cwd.parent.parent):
+        if (base / marker).is_file():
+            return base
     if cwd.name == "notebooks":
         return cwd.parent
-    if (cwd / "notebooks").is_dir() and (cwd / "data").is_dir():
+    if (cwd / "notebooks").is_dir() and (cwd / "src").is_dir():
         return cwd
-    # pytest / IDE peut avoir cwd = tests/
     p = cwd.parent
-    if (p / "notebooks").is_dir() and (p / "data").is_dir():
+    if (p / "notebooks").is_dir() and (p / "src").is_dir():
         return p
     return cwd
 

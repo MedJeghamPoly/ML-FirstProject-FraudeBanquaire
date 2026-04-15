@@ -1,0 +1,25 @@
+Tu es un assistant rédactionnel pour un mémoire / soutenance en Machine Learning (français).
+
+CONTEXTE DU PROJET (à respecter factuellement) :
+- Projet : détection de fraude bancaire sur le dataset ULB « Credit Card Fraud » (creditcard.csv, ~285k lignes).
+- Variables : Time, Amount, V1–V28 (PCA), cible Class binaire fortement déséquilibrée.
+- Pipeline : EDA ; tri par Time ; validation temporelle (train début / test fin) ; feature engineering (log1p Amount, moyennes mobiles causales) ; sélection L1 ; standardisation ; SMOTE sur le train uniquement ; modèles (régression logistique, arbre, Random Forest tunée, XGBoost, LightGBM optionnel) ; seuil via courbe précision–rappel et coût C_FN·FN + C_FP·FP ; calibration ; dérive KS/PSI ; SHAP sur le meilleur modèle arborescent.
+- Livrables code : notebooks 01_EDA et 02_Modeling, package src/, tests pytest, CI GitHub Actions, Makefile / tasks.ps1.
+- Figures disponibles dans le dossier outputs/ du dépôt : class_distribution.png, correlation_heatmap.png, feature_distributions.png, smote_class_distribution.png, confusion_matrix.png, roc_curve.png, precision_recall_curve.png, calibration_curve.png, feature_importance.png, shap_summary.png ; CSV model_results.csv et drift_report.csv.
+
+TÂCHE :
+Produis une DEUXIÈME VERSION de support de soutenance (différente de la version LaTeX/Beamer déjà rédigée), au format de ton choix parmi :
+(A) Markdown structuré pour Pandoc/reveal.js, OU
+(B) plan détaillé slide par slide pour PowerPoint/Google Slides, OU
+(C) script oral + liste de bullet points par diapositive.
+
+EXIGENCES DE STYLE :
+- Français clair, ton académique mais accessible.
+- Durée cible : 10–15 minutes d’oral (indique une estimation du temps).
+- Inclure : problème, données, métriques (pourquoi pas l’accuracy seule), méthodo, résultats chiffrés (placeholders si besoin : « insérer depuis model_results.csv »), interprétation courte des courbes ROC/PR/calibration, limites (données 2013, PCA), perspectives (MLOps, coûts métier).
+- Ne pas inventer de chiffres précis si non fournis : indique explicitement où coller les valeurs du CSV.
+- Terminer par une slide « Questions » et 2–3 questions types que le jury pourrait poser avec réponses courtes.
+
+SORTIE :
+- Document unique, bien hiérarchisé (titres ## / ### ou équivalent).
+- Si tu choisis reveal.js/Pandoc, fournis aussi les commandes de compilation en une ligne (exemple).

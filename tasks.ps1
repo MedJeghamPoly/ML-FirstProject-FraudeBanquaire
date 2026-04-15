@@ -25,7 +25,12 @@ switch ($Task) {
     "emit02" {
         py -3 scripts/emit_02_notebook.py
     }
+    "clean" {
+        Get-ChildItem -Path $Root -Recurse -Directory -Filter "__pycache__" -ErrorAction SilentlyContinue |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "Caches Python (__pycache__) supprimes."
+    }
     default {
-        Write-Host "Taches: install, test, notebooks, pdf, emit02"
+        Write-Host "Taches: install, test, notebooks, pdf, emit02, clean"
     }
 }

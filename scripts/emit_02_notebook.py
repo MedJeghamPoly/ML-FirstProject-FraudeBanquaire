@@ -1,5 +1,6 @@
 """Régénère notebooks/02_Modeling.ipynb (contenu enrichi)."""
 import json
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -8,10 +9,23 @@ OUT = ROOT / "notebooks" / "02_Modeling.ipynb"
 cells = []
 
 def md(s):
-    return {"cell_type": "markdown", "metadata": {}, "source": [line + "\n" for line in s.strip().split("\n")]}
+    return {
+        "cell_type": "markdown",
+        "metadata": {},
+        "source": [line + "\n" for line in s.strip().split("\n")],
+        "id": uuid.uuid4().hex[:16],
+    }
+
 
 def code(s):
-    return {"cell_type": "code", "metadata": {}, "source": [line + "\n" for line in s.strip().split("\n")], "execution_count": None, "outputs": []}
+    return {
+        "cell_type": "code",
+        "metadata": {},
+        "source": [line + "\n" for line in s.strip().split("\n")],
+        "execution_count": None,
+        "outputs": [],
+        "id": uuid.uuid4().hex[:16],
+    }
 
 cells.append(md("""
 # 02 — Prétraitement et modélisation (version enrichie)
@@ -28,8 +42,11 @@ import sys
 from pathlib import Path
 
 _root = Path.cwd().resolve()
-if _root.name == "notebooks":
-    _root = _root.parent
+if not (_root / "src" / "paths.py").is_file():
+    for _base in (_root.parent, _root.parent.parent):
+        if (_base / "src" / "paths.py").is_file():
+            _root = _base
+            break
 if str(_root) not in sys.path:
     sys.path.insert(0, str(_root))
 
@@ -55,6 +72,20 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 
 warnings.filterwarnings("ignore", category=FutureWarning)
+# LightGBM + ndarray : sklearn avertit sur les noms de colonnes (bruit sans impact)
+warnings.filterwarnings(
+    "ignore",
+    message=r".*valid feature names.*",
+    category=UserWarning,
+    module="sklearn.utils.validation",
+)
+# sklearn 1.8+ / sélection L1 interne (src/selection.py est corrigé ; filtre pour noyaux anciens)
+warnings.filterwarnings(
+    "ignore",
+    message=r".*[Pp]enalty.*[Ll]1.*[Rr]atio.*",
+    category=UserWarning,
+    module="sklearn.linear_model._logistic",
+)
 
 try:
     from xgboost import XGBClassifier
@@ -99,6 +130,16 @@ from src.drift import drift_report
 from src.thresholds import best_threshold_cost, cost_at_threshold
 from src.calibration_plots import plot_calibration_reliability
 from src.eda_plotting import COLOR_NEUTRAL, plot_smote_effect, save_fig, setup_plot_style
+from src.shap_utils import estimator_supports_tree_shap
+
+
+def _shap_linear_explainer_ok(clf) -> bool:
+    # Régression logistique -> LinearExplainer ; défini ici pour éviter soucis de cache Jupyter sur shap_utils
+    from sklearn.linear_model import LogisticRegression
+
+    return isinstance(clf, LogisticRegression)
+
+
 from src.ml_utils import (
     clf_params_from_grid,
     cross_val_scores_for_model,
@@ -358,7 +399,7 @@ if hasattr(clf, "feature_importances_"):
     k = min(25, len(imp))
     order = np.argsort(imp)[::-1][:k]
     fig, ax = plt.subplots(figsize=(10, 8))
-    sns.barplot(x=imp[order], y=names[order], ax=ax, orient="h", color=COLOR_NEUTRAL)
+    sns.barplot(x=imp[order], y=names[order], ax=ax, color=COLOR_NEUTRAL)
     ax.set_title(f"Importance — {best_name}")
     plt.tight_layout()
     save_fig(OUTPUT_DIR / "feature_importance.png")
@@ -368,6 +409,8 @@ if ENABLE_CALIBRATION_PLOT:
     fig.savefig(OUTPUT_DIR / "calibration_curve.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
 
+_shap_path = OUTPUT_DIR / "shap_summary.png"
+_shap_ok = False
 if ENABLE_SHAP:
     try:
         import shap
@@ -378,21 +421,56 @@ if ENABLE_SHAP:
         idx_ex = np.random.RandomState(RANDOM_STATE + 1).choice(len(X_test), n_ex, replace=False)
         X_bg = scaler.transform(X_train.iloc[idx_bg])
         X_explain = scaler.transform(X_test.iloc[idx_ex])
-        explainer = shap.TreeExplainer(clf, data=X_bg)
-        sv = explainer.shap_values(X_explain)
-        if isinstance(sv, list):
-            sv = sv[1]
-        shap.summary_plot(sv, X_explain, feature_names=FEATURE_NAMES, show=False, max_display=15)
-        plt.tight_layout()
-        save_fig(OUTPUT_DIR / "shap_summary.png")
+
+        if estimator_supports_tree_shap(clf):
+            explainer = shap.TreeExplainer(clf, data=X_bg)
+            sv = explainer.shap_values(X_explain)
+            if isinstance(sv, list):
+                sv = sv[1]
+            shap.summary_plot(sv, X_explain, feature_names=FEATURE_NAMES, show=False, max_display=15)
+            plt.tight_layout()
+            save_fig(_shap_path)
+            _shap_ok = True
+        elif _shap_linear_explainer_ok(clf):
+            explainer = shap.LinearExplainer(clf, X_bg)
+            sv = explainer.shap_values(X_explain)
+            if isinstance(sv, list):
+                sv = sv[1]
+            shap.summary_plot(sv, X_explain, feature_names=FEATURE_NAMES, show=False, max_display=15)
+            plt.tight_layout()
+            save_fig(_shap_path)
+            _shap_ok = True
+        else:
+            print(
+                "SHAP ignoré pour", type(clf).__name__,
+                "(utiliser RF / XGB / LGBM / régression logistique).",
+            )
+    except ImportError:
+        print("Package shap absent : pip install shap")
     except Exception as e:
-        print("SHAP (TreeExplainer) indisponible ou non applicable :", e)
+        print("SHAP erreur :", e)
+
+    if not _shap_ok:
+        fig, ax = plt.subplots(figsize=(10, 3.8))
+        ax.set_axis_off()
+        ax.text(
+            0.5,
+            0.5,
+            "SHAP non généré. Vérifier : pip install shap ; exécuter tout le notebook ;\n"
+            "meilleur modèle = arbre (RF, XGB, LGBM) ou régression logistique.\n"
+            "Voir les messages Python au-dessus.",
+            ha="center",
+            va="center",
+            fontsize=10,
+        )
+        plt.tight_layout()
+        save_fig(_shap_path)
 
 print("Sorties dans :", OUTPUT_DIR.resolve())
 """))
 
 cells.append(md("""
-**Lecture :** la validation temporelle peut écarter les taux de fraude train/test ; le seuil optimal par coût est indicatif (évalué sur le test — en pratique utiliser une validation dédiée). SHAP requiert `pip install shap` et un estimateur compatible (`TreeExplainer` pour les arbres).
+**Lecture :** la validation temporelle peut écarter les taux de fraude train/test ; le seuil optimal par coût est indicatif (évalué sur le test — en pratique utiliser une validation dédiée). SHAP : `pip install shap` ; **TreeExplainer** (RF, XGB, LGBM, etc.) ou **LinearExplainer** (régression logistique). Si rien n’est applicable, une image d’explication est quand même enregistrée dans `outputs/shap_summary.png`.
 """))
 
 nb = {

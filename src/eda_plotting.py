@@ -76,9 +76,12 @@ def plot_feature_distributions(df: pd.DataFrame, cols: list, target: str, out_pa
             data=df,
             x=target,
             y=col,
+            hue=target,
             ax=axes[i, 1],
             palette=[COLOR_LEGIT, COLOR_FRAUD],
+            dodge=False,
             linewidth=1,
+            legend=False,
         )
         axes[i, 1].set_title(f"{col} by transaction type", fontweight="medium")
         axes[i, 1].set_xlabel("Class (0 = legitimate, 1 = fraud)")

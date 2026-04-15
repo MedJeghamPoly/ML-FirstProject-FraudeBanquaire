@@ -1,0 +1,302 @@
+% =============================================================================
+% Présentation --- Détection de fraude par carte bancaire (Machine Learning)
+%
+% Prérequis : exécuter notebooks/01_EDA.ipynb et notebooks/02_Modeling.ipynb
+%             pour générer les PNG dans outputs/ à la racine du projet.
+%
+% Compilation (pdflatex x2 pour la table des matières) :
+%   Depuis la RACINE du projet ProjetFraudeBanquaire :
+%     pdflatex -output-directory=latex_build latex/presentation_fraude_complete.tex
+%     pdflatex -output-directory=latex_build latex/presentation_fraude_complete.tex
+%   Depuis le dossier latex/ : décommenter \renewcommand{\figdir}{../outputs/}
+% =============================================================================
+\documentclass[aspectratio=169,11pt]{beamer}
+
+% --- Thème de base + personnalisation (sans paquets externes type metropolis) ---
+\usetheme{Madrid}
+\usecolortheme{default}
+\usefonttheme{professionalfonts}
+\setbeamertemplate{navigation symbols}{}
+
+% Palette : bleu institutionnel + accent rouge discret (fraude / alerte)
+\definecolor{MLPrimary}{RGB}{21,67,115}
+\definecolor{MLAccent}{RGB}{183,28,28}
+\definecolor{MLMuted}{RGB}{96,110,125}
+
+\setbeamercolor{structure}{fg=MLPrimary}
+\setbeamercolor{frametitle}{bg=MLPrimary,fg=white}
+\setbeamercolor{title}{fg=MLPrimary}
+\setbeamercolor{subtitle}{fg=MLMuted}
+\setbeamercolor{author in head/foot}{fg=MLMuted}
+\setbeamercolor{title in head/foot}{fg=MLMuted}
+\setbeamercolor{section in toc}{fg=MLPrimary}
+\setbeamercolor{subsection in toc}{fg=black!75}
+\setbeamercolor{itemize item}{fg=MLPrimary}
+\setbeamercolor{itemize subitem}{fg=MLMuted}
+\setbeamercolor{block title}{bg=MLPrimary!85!black,fg=white}
+\setbeamercolor{block body}{bg=MLPrimary!6,fg=black}
+
+\setbeamerfont{title}{size=\LARGE,series=\bfseries}
+\setbeamerfont{subtitle}{size=\normalsize,shape=\itshape}
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+
+\setbeamertemplate{itemize items}[circle]
+\setbeamertemplate{itemize subitem}[triangle]
+\setbeamertemplate{section in toc}[sections numbered]
+\setbeamertemplate{subsection in toc}[subsections numbered]
+\setbeamertemplate{caption}[numbered]
+
+% Pied de page : titre court + numéro (Madrid fournit déjà auteur/titre ; on affine)
+\setbeamertemplate{footline}
+{%
+  \leavevmode%
+  \hbox{%
+    \begin{beamercolorbox}[wd=.42\paperwidth,ht=2.6ex,dp=1ex,left,leftskip=1ex]{author in head/foot}%
+      \usebeamerfont{author in head/foot}\insertshortauthor
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.46\paperwidth,ht=2.6ex,dp=1ex,center]{title in head/foot}%
+      \usebeamerfont{title in head/foot}\insertshorttitle
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.12\paperwidth,ht=2.6ex,dp=1ex,right,rightskip=1ex]{author in head/foot}%
+      \usebeamerfont{author in head/foot}\insertframenumber\,/\,\inserttotalframenumber
+    \end{beamercolorbox}%
+  }%
+}
+
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{hyperref}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=MLPrimary,
+  urlcolor=MLAccent,
+  citecolor=MLMuted,
+}
+
+% Chemin relatif vers outputs/ (images générées par les notebooks)
+\newcommand{\figdir}{outputs/} % Option A : pdflatex depuis la racine du projet
+% \renewcommand{\figdir}{../outputs/} % Option B : pdflatex depuis le dossier latex/
+
+\title[Détection de fraude ML]{Détection de fraude par carte bancaire}
+\subtitle{Projet Machine Learning --- Polytech (Semestre 4)}
+\author{Jegham Mohamed \and Ben Mansour Louay}
+\institute{\normalsize Parcours Machine Learning --- Projet de semestre}
+\date{Avril 2026}
+
+% Intercalaire de section (une diapo par \section)
+\AtBeginSection[]{%
+  \begin{frame}[plain]
+    \vfill
+    \centering
+    \begin{tikzpicture}
+      \node[draw=MLPrimary,line width=1.2pt,rounded corners=3pt,inner sep=14pt,text width=0.82\linewidth,align=center] {%
+        \usebeamerfont{section title}\usebeamercolor[fg]{structure}\LARGE\bfseries\insertsectionhead\par
+      };
+    \end{tikzpicture}
+    \vfill
+  \end{frame}%
+}
+
+% Inclusion des figures + encadré si fichier absent
+\newcommand{\safeimg}[2][0.88]{%
+  \IfFileExists{\figdir#2}{%
+    \begin{center}
+      \begin{tikzpicture}
+        \node[inner sep=0pt,rounded corners=2pt,draw=MLPrimary!25,line width=0.6pt] {%
+          \includegraphics[width=#1\linewidth]{\figdir#2}%
+        };
+      \end{tikzpicture}
+    \end{center}%
+  }{%
+    \begin{center}
+      \fcolorbox{MLPrimary!45}{MLPrimary!8}{%
+        \parbox{0.82\linewidth}{%
+          \centering\small
+          \textbf{Figure absente :} {\ttfamily\figdir\detokenize{#2}}\\[0.45em]
+          Exécuter \texttt{notebooks/01\_EDA.ipynb} et \texttt{02\_Modeling.ipynb} pour générer les sorties dans \texttt{outputs/}.%
+        }%
+      }%
+    \end{center}%
+  }%
+}
+
+\begin{document}
+
+% --- Page de titre avec bandeau ---
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[MLPrimary] (current page.north west) rectangle ([yshift=-1.35cm]current page.north east);
+    \node[anchor=north east,font=\footnotesize\color{white!88}] at ([xshift=-0.6cm,yshift=-0.45cm]current page.north east) {Avril 2026};
+  \end{tikzpicture}
+  \vspace*{1.1cm}
+  \begin{minipage}{\linewidth}
+    {\usebeamerfont{title}\usebeamercolor[fg]{title}\inserttitle\par}
+    \vspace{0.35em}
+    {\usebeamerfont{subtitle}\usebeamercolor[fg]{subtitle}\insertsubtitle\par}
+    \vspace{1.1em}
+    {\usebeamerfont{author}\usebeamercolor[fg]{normal text}\insertauthor\par}
+    \vspace{0.35em}
+    {\small\usebeamercolor[fg]{subtitle}\insertinstitute\par}
+  \end{minipage}
+\end{frame}
+
+\begin{frame}{Plan}
+  \tableofcontents
+\end{frame}
+
+\section{Contexte et données}
+
+\begin{frame}{Contexte}
+  \begin{itemize}
+    \item Fraude à la carte : enjeux financiers, conformité, confiance client.
+    \item Volume transactionnel élevé : décision automatique (scoring) nécessaire.
+    \item Ce travail : classificateur binaire \textbf{légitime} / \textbf{frauduleux} sur données tabulaires réelles (benchmark académique).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Jeu de données (ULB / Kaggle)}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.48\textwidth}
+      \begin{itemize}
+        \item Fichier \texttt{creditcard.csv} : $\approx$ 285\,k transactions.
+        \item Variables : \texttt{Time}, \texttt{Amount}, \texttt{V1}--\texttt{V28} (PCA), cible \texttt{Class} $\in \{0,1\}$.
+        \item \textbf{Déséquilibre sévère} : peu de fraudes --- l'exactitude brute est trompeuse.
+        \item Métriques : F1, ROC-AUC, précision et rappel sur la fraude.
+      \end{itemize}
+    \column{0.52\textwidth}
+      \safeimg[1]{class_distribution.png}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Exploration : corrélations et distributions}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.5\textwidth}
+      \centering\footnotesize\textit{Corrélations}\\[0.35em]
+      \safeimg[1]{correlation_heatmap.png}
+    \column{0.5\textwidth}
+      \centering\footnotesize\textit{Distributions}\\[0.35em]
+      \safeimg[1]{feature_distributions.png}
+  \end{columns}
+\end{frame}
+
+\section{Méthodologie}
+
+\begin{frame}{Chaîne de traitement (vue d'ensemble)}
+  \begin{enumerate}
+    \item EDA : distributions, corrélations, valeurs manquantes.
+    \item Tri par \texttt{Time} ; \textbf{validation temporelle} (train = début, test = fin) --- plus réaliste qu'un split aléatoire.
+    \item \textbf{Features} : \texttt{log1p(Amount)}, ratios vs moyenne mobile \emph{causale} (sans fuite).
+    \item \textbf{Sélection} : L1 (logistique) sur échantillon train.
+    \item Standardisation + \textbf{SMOTE} sur le train uniquement (\texttt{imblearn}).
+    \item Modèles : LR, arbre, RF (GridSearch), XGBoost, LightGBM (optionnel).
+    \item \textbf{Seuil} : PR + coût $C_{\mathrm{FN}}\cdot \mathrm{FN} + C_{\mathrm{FP}}\cdot \mathrm{FP}$.
+    \item Calibration, \textbf{dérive} (KS, PSI), \textbf{SHAP} (modèle arborescent).
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{SMOTE (effet sur les classes --- train)}
+  \centering
+  \safeimg[0.68]{smote_class_distribution.png}
+\end{frame}
+
+\section{Résultats}
+
+\begin{frame}{Comparaison des modèles (jeu de test)}
+  \small
+  Valeurs indicatives --- mettre à jour depuis \texttt{outputs/model\_results.csv} après exécution du notebook.
+  \vspace{0.45em}
+  \begin{center}
+  \renewcommand{\arraystretch}{1.15}
+  \begin{tabular}{@{}l*{5}{c}@{}}
+    \toprule
+    \textbf{Modèle} & \textbf{Acc.} & \textbf{Préc.} & \textbf{Rappel} & \textbf{F1} & \textbf{AUC} \\
+    \midrule
+    Régression logistique & 0,974 & 0,058 & 0,918 & 0,109 & 0,971 \\
+    Arbre de décision & 0,986 & 0,097 & 0,827 & 0,174 & 0,869 \\
+    Random Forest (optimisé) & 0,999 & 0,804 & 0,796 & 0,800 & 0,978 \\
+    XGBoost & 0,998 & 0,452 & 0,867 & 0,594 & 0,976 \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vfill
+  \footnotesize\textit{Recopier les lignes depuis le CSV pour coller à votre exécution.}
+\end{frame}
+
+\begin{frame}{Matrice de confusion (modèle retenu)}
+  \centering
+  \safeimg[0.56]{confusion_matrix.png}
+\end{frame}
+
+\begin{frame}{Courbe ROC}
+  \centering
+  \safeimg[0.74]{roc_curve.png}
+\end{frame}
+
+\begin{frame}{Précision--rappel et choix de seuil (coût métier)}
+  \centering
+  \safeimg[0.74]{precision_recall_curve.png}
+\end{frame}
+
+\begin{frame}{Calibration des probabilités}
+  \centering
+  \safeimg[0.74]{calibration_curve.png}
+\end{frame}
+
+\begin{frame}{Importance des variables (modèle retenu)}
+  \centering
+  \safeimg[0.74]{feature_importance.png}
+\end{frame}
+
+\begin{frame}{Explicabilité : SHAP (échantillon)}
+  \centering
+  \safeimg[0.74]{shap_summary.png}
+\end{frame}
+
+\section{Dérive et limites}
+
+\begin{frame}{Dérive train vs test}
+  \begin{itemize}
+    \item Comparaison des distributions (Kolmogorov--Smirnov, PSI) sur \texttt{Amount} et quelques \texttt{V*}.
+    \item Rapport : \texttt{outputs/drift\_report.csv}.
+    \item Documente l'écart entre période d'entraînement et de test (cohérent avec le split temporel).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Limites et perspectives}
+  \begin{itemize}
+    \item Données de 2013 : généralisation et dérive ; monitoring en production.
+    \item Variables en PCA : interprétation métier limitée ; SHAP sur l'espace des features.
+    \item Pistes : CatBoost, TabNet, coûts métier, MLOps (PSI/KS).
+  \end{itemize}
+\end{frame}
+
+\section{Conclusion}
+
+\begin{frame}{Conclusion}
+  \begin{itemize}
+    \item Pipeline reproductible : \texttt{requirements.txt}, notebooks \texttt{01\_EDA} / \texttt{02\_Modeling}, \texttt{src/}, tests \texttt{pytest}.
+    \item Automatisation : \texttt{Makefile}, \texttt{tasks.ps1} ; CI GitHub Actions.
+    \item Le modèle est un \textbf{outil d'aide à la décision} : seuils et gouvernance côté métier.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[MLPrimary!12] (current page.south west) rectangle (current page.north east);
+  \end{tikzpicture}
+  \vspace*{2.2cm}
+  \centering
+  {\LARGE\bfseries\color{MLPrimary} Questions ?}\par
+  \vspace{1.4em}
+  \normalsize
+  \href{https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud}{\textcolor{MLAccent}{Dataset Kaggle --- ULB Credit Card Fraud}}
+\end{frame}
+
+\end{document}

@@ -5,6 +5,7 @@ import pandas as pd
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline as ImbPipeline
 from sklearn.base import clone
+from sklearn.preprocessing import FunctionTransformer
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
@@ -18,9 +19,17 @@ from sklearn.preprocessing import StandardScaler
 from .paths import RANDOM_STATE
 
 
+def _dataframe_to_float_array(X):
+    """Entrée pipeline en ndarray : évite les avertissements LightGBM / sklearn (noms de colonnes)."""
+    if isinstance(X, pd.DataFrame):
+        return X.to_numpy(dtype=np.float64, copy=False)
+    return np.asarray(X, dtype=np.float64)
+
+
 def make_fraud_pipeline(classifier) -> ImbPipeline:
     return ImbPipeline(
         steps=[
+            ("to_array", FunctionTransformer(_dataframe_to_float_array, validate=False)),
             ("scaler", StandardScaler()),
             ("smote", SMOTE(random_state=RANDOM_STATE)),
             ("clf", classifier),
