@@ -2,9 +2,10 @@
 % Présentation --- Détection de fraude par carte bancaire (Machine Learning)
 % Version améliorée : images correctement dimensionnées, UI professionnelle
 %
-% Compilation depuis la RACINE du projet (pdflatex x2) :
+% Compilation depuis la RACINE du projet (pdflatex x2) — figures = dossier outputs/ :
 %   pdflatex -output-directory=latex_build latex/presentation_fraude_complete.tex
 %   pdflatex -output-directory=latex_build latex/presentation_fraude_complete.tex
+% Prérequis : exécuter 01_EDA.ipynb et 02_Modeling.ipynb pour remplir outputs/
 % =============================================================================
 \documentclass[aspectratio=169,11pt]{beamer}
 
@@ -95,9 +96,9 @@
   citecolor=MLMuted,
 }
 
-% ─────────────────── Chemin des figures ──────────────────────────────────────
-\newcommand{\figdir}{}         % Option A : pdflatex depuis la racine
-% \renewcommand{\figdir}{../}  % Option B : pdflatex depuis latex/
+% ─────────────────── Chemin des figures (toutes dans outputs/) ─────────────
+\newcommand{\figdir}{outputs/}  % pdflatex depuis la racine du projet
+% \renewcommand{\figdir}{../outputs/}  % si compilation depuis latex/
 
 % ─────────────────── Macro d'inclusion sécurisée ─────────────────────────────
 % Usage : \safeimg[width_ratio]{filename}  (défaut 0.85)
@@ -139,7 +140,7 @@
         ] {%
           \textcolor{MLAccent}{\textbf{\small Figure manquante}}\\\smallskip
           \texttt{\small\figdir\detokenize{#2}}\\[4pt]
-          \textcolor{MLMuted}{Générer via \texttt{01\_EDA.ipynb} / \texttt{02\_Modeling.ipynb}}%
+          \textcolor{MLMuted}{Générer \texttt{outputs/} via \texttt{01\_EDA.ipynb} / \texttt{02\_Modeling.ipynb}}%
         };
       \end{tikzpicture}%
     \end{center}%
@@ -295,6 +296,8 @@
     \item \textbf{Modèles}~: LR, Arbre, RF (GridSearch), XGBoost, LightGBM.
     \item \textbf{Seuil optimal}~: courbe PR + coût métier $C_\mathrm{FN}\cdot\mathrm{FN}+C_\mathrm{FP}\cdot\mathrm{FP}$.
     \item \textbf{Post-traitement}~: calibration, dérive (KS, PSI), SHAP.
+    \item \textbf{Sauvegarde}~: \texttt{best\_model.pkl}, liste des variables \texttt{feature\_columns.json} (25~colonnes après sélection).
+    \item \textbf{Démonstration}~: application \textbf{Streamlit} (seuil, graphiques Plotly, import CSV de test).
   \end{enumerate}
 \end{frame}
 
@@ -308,11 +311,12 @@
 % =============================================================================
 
 \begin{frame}{Comparaison des modèles (jeu de test)}
-  {\small\textcolor{MLMuted}{Valeurs indicatives --- mettre à jour depuis \texttt{model\_results.csv}.}}
-  \vspace{0.4em}
+  {\small\textcolor{MLMuted}{Métriques issues de \texttt{outputs/model\_results.csv} (dernière exécution du notebook).}}
+  \vspace{0.35em}
   \begin{center}
-    \renewcommand{\arraystretch}{1.2}
-    \begin{tabular}{@{}>{\small}l *{5}{>{\small\centering\arraybackslash}p{1.5cm}}@{}}
+    \renewcommand{\arraystretch}{1.15}
+    \scriptsize
+    \begin{tabular}{@{}l *{5}{>{\centering\arraybackslash}p{1.05cm}}@{}}
       \toprule
       \rowcolor{MLDeep!90}
       \textcolor{white}{\textbf{Modèle}} &
@@ -322,18 +326,22 @@
       \textcolor{white}{\textbf{F1}} &
       \textcolor{white}{\textbf{AUC}} \\
       \midrule
-      Régression logistique & 0,974 & 0,058 & 0,918 & 0,109 & 0,971 \\
+      Régression logistique & 0,984 & 0,065 & 0,853 & 0,121 & 0,981 \\
       \rowcolor{MLLight}
-      Arbre de décision     & 0,986 & 0,097 & 0,827 & 0,174 & 0,869 \\
+      Arbre de décision     & 0,993 & 0,132 & 0,773 & 0,225 & 0,820 \\
       \rowcolor{MLGreen!12}
-      \textbf{Random Forest (opt.)} & \textbf{0,999} & \textbf{0,804} & \textbf{0,796} & \textbf{0,800} & \textbf{0,978} \\
+      \textbf{Random Forest (tuné)} & \textbf{1,000} & \textbf{0,933} & \textbf{0,747} & \textbf{0,830} & \textbf{0,964} \\
       \rowcolor{MLLight}
-      XGBoost               & 0,998 & 0,452 & 0,867 & 0,594 & 0,976 \\
+      XGBoost               & 0,999 & 0,652 & 0,773 & 0,707 & 0,980 \\
+      \rowcolor{MLLight}
+      LightGBM              & 0,999 & 0,637 & 0,773 & 0,699 & 0,982 \\
       \bottomrule
     \end{tabular}
   \end{center}
-  \vfill
-  {\footnotesize\textcolor{MLMuted}{\textit{Ligne verte = modèle retenu. Recopier depuis le CSV pour coller à votre exécution.}}}
+  \vspace{0.4em}
+  \begin{exampleblock}{Lecture}
+    \small Meilleur \textbf{F1} sur ce run~: \textbf{Random Forest} (ligne verte). Les valeurs se mettent à jour automatiquement après \texttt{02\_Modeling.ipynb}.
+  \end{exampleblock}
 \end{frame}
 
 \begin{frame}{Matrice de confusion~: modèle retenu}
@@ -367,23 +375,74 @@
 \end{frame}
 
 % =============================================================================
-\section{Dérive et limites}
+\section{Sorties du projet et démonstration}
 % =============================================================================
 
-\begin{frame}{Dérive train \textit{vs} test}
+\begin{frame}[t]{Artefacts dans \texttt{outputs/}}
   \begin{columns}[T,onlytextwidth]
-    \column{0.55\textwidth}
-      \begin{itemize}
-        \item Tests \textbf{Kolmogorov–Smirnov} et \textbf{PSI} sur \texttt{Amount} et les \texttt{V*} clés.
-        \item Rapport exporté~: \texttt{drift\_report.csv}.
-        \item Cohérent avec le split temporel~: les distributions évoluent légèrement en fin de période.
-      \end{itemize}
-    \column{0.45\textwidth}
-      \begin{alertblock}{\small Point de vigilance}
-        \small Un PSI $>0.20$ sur une variable clé signale une dérive significative nécessitant un re-entraînement.
-      \end{alertblock}
+    \column{0.52\textwidth}
+      \begin{block}{Fichiers générés par le pipeline}
+        \small
+        \begin{itemize}
+          \item \textbf{Modèle}~: \texttt{best\_model.pkl}
+          \item \textbf{Entrées du scoreur}~: \texttt{feature\_columns.json} (25~variables retenues)
+          \item \textbf{Tableau de synthèse}~: \texttt{model\_results.csv}
+          \item \textbf{Dérive}~: \texttt{drift\_report.csv}
+          \item \textbf{Figures}~: ROC, PR, calibration, SHAP, matrices\ldots
+        \end{itemize}
+      \end{block}
+    \column{0.48\textwidth}
+      \begin{exampleblock}{Cohérence}
+        \small L’interface Streamlit charge le même pipeline et les mêmes noms de colonnes que le notebook — pas de décalage de schéma.
+      \end{exampleblock}
+      \vspace{0.3em}
+      {\footnotesize\textcolor{MLMuted}{Relancer \texttt{02\_Modeling.ipynb} après toute modification du flux pour régénérer ces fichiers.}}
   \end{columns}
 \end{frame}
+
+\begin{frame}{Dérive train \textit{vs} test (\texttt{drift\_report.csv})}
+  \small
+  Extrait des indicateurs exportés (KS, PSI) — \textit{valeurs typiques d’une exécution récente}~:
+  \vspace{0.4em}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{@{}lccc@{}}
+      \toprule
+      \rowcolor{MLDeep!85}
+      \textcolor{white}{\textbf{Variable}} &
+      \textcolor{white}{\textbf{KS}} &
+      \textcolor{white}{\textbf{p-val. KS}} &
+      \textcolor{white}{\textbf{PSI}} \\
+      \midrule
+      \texttt{Amount\_log} & 0,053 & $\approx 0$ & 0,014 \\
+      \texttt{Time}        & 1,000 & $\approx 0$ & 11,51 \\
+      \texttt{V14}         & 0,086 & $\approx 0$ & 0,061 \\
+      \texttt{V12}         & 0,088 & $\approx 0$ & 0,151 \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+  \vspace{0.35em}
+  \begin{alertblock}{Lecture}
+    \small Split temporel~: \texttt{Time} peut fortement diverger entre train et test (PSI élevé). Sur les \texttt{V*} et \texttt{Amount\_log}, le PSI reste souvent modéré — à suivre en production (seuil courant PSI $>0{,}2$).
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Interface Streamlit — essai du modèle}
+  \begin{itemize}
+    \item \textbf{Seuil} réglable + coût métier $C_{\mathrm{FN}}{:}C_{\mathrm{FP}}$ aligné sur \texttt{src/config.py}.
+    \item \textbf{Échantillon}~: fenêtre aléatoire, depuis le début, ou décalage fixe — reproductibilité affichée, export CSV des prédictions.
+    \item \textbf{Visualisation}~: histogrammes Plotly des probabilités par vraie classe.
+    \item \textbf{Import CSV}~: fichier avec \texttt{Time}, \texttt{Amount}, \texttt{V1}--\texttt{V28} ; historique causal du jeu pour les moyennes mobiles ; résultats téléchargeables.
+  \end{itemize}
+  \vspace{0.5em}
+  \begin{block}{Lancement}
+    \centering\texttt{streamlit run streamlit\_app.py}\quad\textit{(depuis la racine du projet)}
+  \end{block}
+\end{frame}
+
+% =============================================================================
+\section{Limites et perspectives}
+% =============================================================================
 
 \begin{frame}{Limites et perspectives}
   \begin{columns}[T,onlytextwidth]
@@ -410,15 +469,16 @@
 % =============================================================================
 
 \begin{frame}{Conclusion}
-  \begin{block}{Pipeline reproductible livré}
-    \texttt{requirements.txt} · notebooks \texttt{01\_EDA} / \texttt{02\_Modeling} · \texttt{src/} · tests \texttt{pytest}
+  \begin{block}{Livrables techniques}
+    \small
+    \texttt{requirements.txt} · \texttt{01\_EDA} / \texttt{02\_Modeling} · \texttt{src/} · \texttt{outputs/*} · \texttt{streamlit\_app.py} · tests \texttt{pytest}
   \end{block}
-  \vspace{0.6em}
+  \vspace{0.5em}
   \begin{itemize}
     \item Automatisation~: \texttt{Makefile}, \texttt{tasks.ps1}~; CI GitHub Actions.
-    \item \textbf{Random Forest optimisé}~: meilleur compromis Précision/Rappel (F1 = 0,80, AUC = 0,978).
-    \item Le modèle est un \textbf{outil d'aide à la décision}~:
-          seuil et gouvernance restent du ressort métier.
+    \item \textbf{Random Forest (GridSearch)}~: meilleur F1 sur le jeu de test actuel (\textbf{F1 $\approx 0{,}83$}, AUC-ROC $\approx 0{,}96$) — voir \texttt{model\_results.csv}.
+    \item \textbf{Démonstration interactive}~: scoring, seuil, import CSV et figures Plotly via Streamlit.
+    \item Le modèle reste un \textbf{outil d'aide à la décision}~: seuil et arbitrage FN/FP sont métier.
   \end{itemize}
 \end{frame}
 
