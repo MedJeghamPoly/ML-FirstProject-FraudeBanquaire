@@ -1,5 +1,5 @@
-# Usage : make install | make test | make notebooks (nécessite jupyter)
-.PHONY: install test notebooks pdf
+# Usage : make install | make test | make notebooks | make streamlit
+.PHONY: install test notebooks pdf streamlit
 
 install:
 	pip install -r requirements.txt
@@ -12,3 +12,6 @@ notebooks:
 
 pdf:
 	py scripts/build_presentation_pdf.py
+
+streamlit:
+	streamlit run streamlit_app.py

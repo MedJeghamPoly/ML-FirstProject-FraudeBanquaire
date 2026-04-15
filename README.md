@@ -53,6 +53,7 @@ Sur GitHub : workflow **`.github/workflows/ci.yml`** (Python 3.11, installation 
 | `make notebooks` / `.\tasks.ps1 notebooks` | Exécuter `01_EDA.ipynb` puis `02_Modeling.ipynb` (nbconvert) |
 | `make pdf` / `.\tasks.ps1 pdf` | Générer `Presentation.pdf` |
 | `.\tasks.ps1 emit02` | Régénérer `notebooks/02_Modeling.ipynb` depuis `scripts/emit_02_notebook.py` |
+| `.\tasks.ps1 streamlit` | Lancer l’interface Streamlit (`streamlit run streamlit_app.py`) |
 
 Sous Linux/macOS, `make notebooks` suppose que `jupyter` est dans le `PATH`.
 
@@ -65,6 +66,20 @@ Sous Linux/macOS, `make notebooks` suppose que `jupyter` est dans le `PATH`.
 2. Le noyau Python doit avoir la **racine du projet** accessible : les notebooks ajoutent automatiquement le répertoire parent à `sys.path` pour importer le package `src/`.
 
 3. Les figures, `model_results.csv`, `drift_report.csv`, matrices de confusion, courbes ROC/PR, calibration, et `best_model.pkl` sont écrits dans **`outputs/`**.
+
+4. Le notebook enregistre aussi **`outputs/feature_columns.json`** (noms des variables attendues par le modèle), utilisé par l’interface Streamlit.
+
+## Interface Streamlit (démo)
+
+Après avoir exécuté **`02_Modeling.ipynb`** (pour `outputs/best_model.pkl` et `feature_columns.json`) et avec **`data/creditcard.csv`** présent :
+
+```bash
+streamlit run streamlit_app.py
+```
+
+Sous Windows : **`.\tasks.ps1 streamlit`**
+
+L’application affiche des prédictions sur une fenêtre de transactions (probabilité de fraude, seuil réglable, comparaison avec la classe réelle sur l’échantillon) et le tableau `model_results.csv` si disponible.
 
 ## Structure du dépôt
 

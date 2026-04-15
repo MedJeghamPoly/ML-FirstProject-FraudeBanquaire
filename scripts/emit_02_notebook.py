@@ -373,6 +373,12 @@ cells.append(code(r"""
 print("Meilleur modèle (F1 test) :", best_name)
 joblib.dump(best_pipe, OUTPUT_DIR / "best_model.pkl")
 
+import json
+
+with open(OUTPUT_DIR / "feature_columns.json", "w", encoding="utf-8") as _fp:
+    json.dump(FEATURE_NAMES, _fp, ensure_ascii=False, indent=1)
+print("Colonnes du modèle enregistrées :", OUTPUT_DIR / "feature_columns.json")
+
 y_pred = best_pipe.predict(X_test)
 fig, ax = plt.subplots(figsize=(6, 5))
 ConfusionMatrixDisplay.from_predictions(

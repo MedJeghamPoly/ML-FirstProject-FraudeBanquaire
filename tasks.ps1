@@ -30,7 +30,11 @@ switch ($Task) {
             Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
         Write-Host "Caches Python (__pycache__) supprimes."
     }
+    "streamlit" {
+        Set-Location $Root
+        py -3 -m streamlit run streamlit_app.py
+    }
     default {
-        Write-Host "Taches: install, test, notebooks, pdf, emit02, clean"
+        Write-Host "Taches: install, test, notebooks, pdf, emit02, clean, streamlit"
     }
 }
