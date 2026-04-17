@@ -1,7 +1,7 @@
 # Détection de fraude par carte bancaire (Machine Learning)
 
-**Auteur :** [Votre nom]  
-**Cours :** Machine Learning — Polytech (Semestre 4)
+**Auteur :** Jegham Mohamed & Ben Mansour Louay  
+**Cours :** Machine Learning — Polytech
 
 ## Problématique
 
